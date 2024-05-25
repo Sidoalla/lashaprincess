@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Home - Sistema di Prenotazioni</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'prenotazioni/style.css' %}">
+    <link rel="stylesheet" href="https://unpkg.com/fullcalendar@5/main.min.css"/>
+    <script src="https://unpkg.com/fullcalendar@5/main.min.js"></script>
+    <style>
+        .fc-event-tooltip {
+            position: absolute;
+            z-index: 10001;
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            display: none;
+        }
+        .unavailable {
+            color: red;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="hover-circle"></div>
+    <h1>Benvenuto nel Sistema di Prenotazioni</h1>
+    <div id='calendar'></div>
+    <div id="tooltip" class="fc-event-tooltip"></div>
+
+    <!-- Modale per la selezione dell'orario -->
+    <div id="modal-overlay" onclick="closeModal()"></div>
+    <div id="time-selection-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Scegli l'orario</h5>
+                <button type="button" class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ul id="time-list" class="list-group"></ul>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-time" class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale di riepilogo -->
+    <div id="summary-modal-overlay" onclick="closeSummaryModal()"></div>
+    <div id="summary-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Riepilogo Prenotazione</h5>
+                <button type="button" class="close" onclick="closeSummaryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="summary-content"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-summary" class="btn btn-primary" onclick="confirmBooking()">Conferma</button>
+                <button id="cancel-summary" class="btn btn-secondary" onclick="closeSummaryModal()">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var selectedDate = null;
+            var selectedTime = null;
+            var userName = null;
+            var userEmail = null;
+            var tooltip = document.getElementById('tooltip');
+
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                initialDate: new Date(),
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,dayGridWeek,dayGridDay'
+                },
+                events: '/get_events/',
+                dateClick: function(info) {
+                    selectedDate = info.dateStr;
+                    fetch(`/get_events/?date=${selectedDate}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById('modal-overlay').style.display = 'block';
+                            document.getElementById('time-selection-modal').style.display = 'block';
+                            generateTimeOptions(data);
+                        });
+                },
+                eventMouseEnter: function(info) {
+                    var event = info.event;
+                    var tooltipContent = `
+                        <div><strong>${event.title}</strong></div>
+                        <div>${event.start.toLocaleString()}</div>
+                    `;
+                    tooltip.innerHTML = tooltipContent;
+                    tooltip.style.display = 'block';
+                    tooltip.style.top = (info.jsEvent.pageY + 10) + 'px';
+                    tooltip.style.left = (info.jsEvent.pageX + 10) + 'px';
+                },
+                eventMouseLeave: function(info) {
+                    tooltip.style.display = 'none';
+                }
+            });
+            calendar.render();
+
+            document.addEventListener('mousemove', function(event) {
+                if (tooltip.style.display === 'block') {
+                    tooltip.style.top = (event.pageY + 10) + 'px';
+                    tooltip.style.left = (event.pageX + 10) + 'px';
+                }
+            });
+
+            function generateTimeOptions(events) {
+                var ul = document.getElementById('time-list');
+                ul.innerHTML = '';
+                var startTime = 9.5;
+                var endTime = 18.5;
+                var availableTimes = getAvailableTimes(events);
+
+                availableTimes.forEach(time => {
+                    var li = document.createElement('li');
+                    li.classList.add('list-group-item', 'list-group-item-action');
+                    if (time.unavailable) {
+                        li.classList.add('unavailable');
+                    } else {
+                        li.onclick = function() {
+                            var siblings = ul.children;
+                            for (var i = 0; i < siblings.length; i++) {
+                                siblings[i].classList.remove('active');
+                            }
+                            this.classList.add('active');
+                            selectedTime = this.textContent;
+                            showSummaryModal();
+                        };
+                    }
+                    li.textContent = time.label;
+                    ul.appendChild(li);
+                });
+            }
+
+            function getAvailableTimes(events) {
+                var bookedTimes = events.map(event => new Date(event.start).getHours() + new Date(event.start).getMinutes() / 60);
+                var allTimes = [];
+                for (var hour = 9.5; hour <= 18.5; hour += 0.5) {
+                    allTimes.push(hour);
+                }
+
+                var availableTimes = allTimes.map(time => {
+                    var isAvailable = bookedTimes.every(bookedTime => Math.abs(time - bookedTime) >= 3);
+                    var hourPart = Math.floor(time);
+                    var minutePart = (time % 1) * 60;
+                    var label = ('0' + hourPart).slice(-2) + ':' + ('0' + minutePart).slice(-2);
+                    return {
+                        label: label,
+                        unavailable: !isAvailable
+                    };
+                });
+
+                return availableTimes;
+            }
+
+            function showSummaryModal() {
+                userName = prompt("Inserisci il tuo nome:");
+                userEmail = prompt("Inserisci la tua email:");
+                if (userName && userEmail) {
+                    var summary = `Nome: ${userName}<br>Email: ${userEmail}<br>Data: ${selectedDate}<br>Ora: ${selectedTime}`;
+                    document.getElementById('summary-content').innerHTML = summary;
+                    document.getElementById('modal-overlay').style.display = 'none';
+                    document.getElementById('time-selection-modal').style.display = 'none';
+                    document.getElementById('summary-modal-overlay').style.display = 'block';
+                    document.getElementById('summary-modal').style.display = 'block';
+                } else {
+                    closeModal();
+                }
+            }
+
+            function closeSummaryModal() {
+                document.getElementById('summary-modal-overlay').style.display = 'none';
+                document.getElementById('summary-modal').style.display = 'none';
+                closeModal();
+            }
+
+            function confirmBooking() {
+                if (userName && userEmail && selectedDate && selectedTime) {
+                    fetch('/aggiungi_prenotazione/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            nome: userName,
+                            email: userEmail,
+                            data_prenotazione: selectedDate,
+                            ora_prenotazione: selectedTime
+                        })
+                    }).then(response => {
+                        if (response.ok) {
+                            calendar.addEvent({
+                                title: `Prenotazione di ${userName}`,
+                                start: `${selectedDate}T${selectedTime}`,
+                                allDay: false
+                            });
+                            closeSummaryModal();
+                        }
+                    }).catch(error => {
+                        console.error('Error:', error);
+                        closeSummaryModal();
+                    });
+                } else {
+                    closeSummaryModal();
+                }
+            }
+
+            function closeModal() {
+                document.getElementById('modal-overlay').style.display = 'none';
+                document.getElementById('time-selection-modal').style.display = 'none';
+                selectedTime = null;
+                calendar.render();
+            }
+
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            window.closeModal = closeModal;
+            window.closeSummaryModal = closeSummaryModal;
+            window.confirmBooking = confirmBooking;
+        });
+    </script>
+</body>
+</html>
