@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Cancella Prenotazione</h2>
+  <p>Sei sicuro di voler cancellare la prenotazione di {{ prenotazione.nome }} per il {{ prenotazione.data_prenotazione }} alle {{ prenotazione.ora_prenotazione }}?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit">Sì, cancella</button>
+    <a href="{% url 'lista_prenotazioni' %}">No, torna alla lista delle prenotazioni</a>
+  </form>
+{% endblock %}

@@ -2,29 +2,32 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Home - Sistema di Prenotazioni</title>
     {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'prenotazioni/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'prenotazioni/css/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'cookie/cookie-consent.css' %}">
     <link rel="stylesheet" href="https://unpkg.com/fullcalendar@5/main.min.css"/>
     <script src="https://unpkg.com/fullcalendar@5/main.min.js"></script>
     <style>
-        .fc-event-tooltip {
+        /* Stile per il pulsante di eliminazione */
+        .delete-button {
             position: absolute;
-            z-index: 10001;
-            background: rgba(0, 0, 0, 0.75);
+            top: 2px;
+            right: 2px;
+            background-color: red;
             color: white;
-            padding: 5px;
-            border-radius: 3px;
-            font-size: 12px;
-            display: none;
-        }
-        .unavailable {
-            color: red;
-            cursor: not-allowed;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            text-align: center;
+            cursor: pointer;
+            z-index: 10;
         }
     </style>
 </head>
-<body>
+<body data-is-admin="{{ is_admin }}">
     <div class="hover-circle"></div>
     <h1>Benvenuto nel Sistema di Prenotazioni</h1>
     <div id='calendar'></div>
@@ -57,6 +60,13 @@
             </div>
             <div class="modal-body">
                 <p id="summary-content"></p>
+                <label>
+                    <input type="checkbox" id="email-consent">
+                    Ci tengo che tu sappia che sarai sempre aggiornato su tutte le nostre novità e promozioni esclusive. Vuoi rimanere in contatto con noi?
+                </label>
+                <p>
+                    <a href="{% url 'informativa_privacy' %}">Leggi la nostra Informativa sulla Privacy</a>
+                </p>
             </div>
             <div class="modal-footer">
                 <button id="confirm-summary" class="btn btn-primary" onclick="confirmBooking()">Conferma</button>
@@ -65,186 +75,83 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var calendarEl = document.getElementById('calendar');
-            var selectedDate = null;
-            var selectedTime = null;
-            var userName = null;
-            var userEmail = null;
-            var tooltip = document.getElementById('tooltip');
+    <!-- Modale di modifica -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifica Prenotazione</h5>
+                <button type="button" class="close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-form">
+                    <input type="hidden" id="event-id">
+                    <div class="form-group">
+                        <label for="event-title">Nome</label>
+                        <input type="text" id="event-title" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-start">Data Inizio</label>
+                        <input type="datetime-local" id="event-start" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-end">Data Fine</label>
+                        <input type="datetime-local" id="event-end" class="form-control">
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="updateBooking()">Salva</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Annulla</button>
+                </form>
+            </div>
+        </div>
+    </div>
 
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                initialDate: new Date(),
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,dayGridWeek,dayGridDay'
-                },
-                events: '/get_events/',
-                dateClick: function(info) {
-                    selectedDate = info.dateStr;
-                    fetch(`/get_events/?date=${selectedDate}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            document.getElementById('modal-overlay').style.display = 'block';
-                            document.getElementById('time-selection-modal').style.display = 'block';
-                            generateTimeOptions(data);
-                        });
-                },
-                eventMouseEnter: function(info) {
-                    var event = info.event;
-                    var tooltipContent = `
-                        <div><strong>${event.title}</strong></div>
-                        <div>${event.start.toLocaleString()}</div>
-                    `;
-                    tooltip.innerHTML = tooltipContent;
-                    tooltip.style.display = 'block';
-                    tooltip.style.top = (info.jsEvent.pageY + 10) + 'px';
-                    tooltip.style.left = (info.jsEvent.pageX + 10) + 'px';
-                },
-                eventMouseLeave: function(info) {
-                    tooltip.style.display = 'none';
-                }
-            });
-            calendar.render();
+    <!-- Modale di login -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Login</h5>
+                <button type="button" class="close" onclick="closeLoginModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="login-form" method="POST" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+            </div>
+        </div>
+    </div>
 
-            document.addEventListener('mousemove', function(event) {
-                if (tooltip.style.display === 'block') {
-                    tooltip.style.top = (event.pageY + 10) + 'px';
-                    tooltip.style.left = (event.pageX + 10) + 'px';
-                }
-            });
+    <!-- Modale per il motivo della cancellazione -->
+<div id="reason-modal-overlay" onclick="closeReasonModal()"></div>
+<div id="reason-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Motivo della Cancellazione</h5>
+            <button type="button" class="close" onclick="closeReasonModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="reason-form">
+                <input type="hidden" id="reason-event-id">
+                <div class="form-group">
+                    <label for="cancellation-reason">Motivo</label>
+                    <textarea id="cancellation-reason" class="form-control" required></textarea>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="submitReason()">Conferma</button>
+                <button type="button" class="btn btn-secondary" onclick="closeReasonModal()">Annulla</button>
+            </form>
+        </div>
+    </div>
+</div>
 
-            function generateTimeOptions(events) {
-                var ul = document.getElementById('time-list');
-                ul.innerHTML = '';
-                var startTime = 9.5;
-                var endTime = 18.5;
-                var availableTimes = getAvailableTimes(events);
 
-                availableTimes.forEach(time => {
-                    var li = document.createElement('li');
-                    li.classList.add('list-group-item', 'list-group-item-action');
-                    if (time.unavailable) {
-                        li.classList.add('unavailable');
-                    } else {
-                        li.onclick = function() {
-                            var siblings = ul.children;
-                            for (var i = 0; i < siblings.length; i++) {
-                                siblings[i].classList.remove('active');
-                            }
-                            this.classList.add('active');
-                            selectedTime = this.textContent;
-                            showSummaryModal();
-                        };
-                    }
-                    li.textContent = time.label;
-                    ul.appendChild(li);
-                });
-            }
-
-            function getAvailableTimes(events) {
-                var bookedTimes = events.map(event => new Date(event.start).getHours() + new Date(event.start).getMinutes() / 60);
-                var allTimes = [];
-                for (var hour = 9.5; hour <= 18.5; hour += 0.5) {
-                    allTimes.push(hour);
-                }
-
-                var availableTimes = allTimes.map(time => {
-                    var isAvailable = bookedTimes.every(bookedTime => Math.abs(time - bookedTime) >= 3);
-                    var hourPart = Math.floor(time);
-                    var minutePart = (time % 1) * 60;
-                    var label = ('0' + hourPart).slice(-2) + ':' + ('0' + minutePart).slice(-2);
-                    return {
-                        label: label,
-                        unavailable: !isAvailable
-                    };
-                });
-
-                return availableTimes;
-            }
-
-            function showSummaryModal() {
-                userName = prompt("Inserisci il tuo nome:");
-                userEmail = prompt("Inserisci la tua email:");
-                if (userName && userEmail) {
-                    var summary = `Nome: ${userName}<br>Email: ${userEmail}<br>Data: ${selectedDate}<br>Ora: ${selectedTime}`;
-                    document.getElementById('summary-content').innerHTML = summary;
-                    document.getElementById('modal-overlay').style.display = 'none';
-                    document.getElementById('time-selection-modal').style.display = 'none';
-                    document.getElementById('summary-modal-overlay').style.display = 'block';
-                    document.getElementById('summary-modal').style.display = 'block';
-                } else {
-                    closeModal();
-                }
-            }
-
-            function closeSummaryModal() {
-                document.getElementById('summary-modal-overlay').style.display = 'none';
-                document.getElementById('summary-modal').style.display = 'none';
-                closeModal();
-            }
-
-            function confirmBooking() {
-                if (userName && userEmail && selectedDate && selectedTime) {
-                    fetch('/aggiungi_prenotazione/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
-                        body: JSON.stringify({
-                            nome: userName,
-                            email: userEmail,
-                            data_prenotazione: selectedDate,
-                            ora_prenotazione: selectedTime
-                        })
-                    }).then(response => {
-                        if (response.ok) {
-                            calendar.addEvent({
-                                title: `Prenotazione di ${userName}`,
-                                start: `${selectedDate}T${selectedTime}`,
-                                allDay: false
-                            });
-                            closeSummaryModal();
-                        }
-                    }).catch(error => {
-                        console.error('Error:', error);
-                        closeSummaryModal();
-                    });
-                } else {
-                    closeSummaryModal();
-                }
-            }
-
-            function closeModal() {
-                document.getElementById('modal-overlay').style.display = 'none';
-                document.getElementById('time-selection-modal').style.display = 'none';
-                selectedTime = null;
-                calendar.render();
-            }
-
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
-                    }
-                }
-                return cookieValue;
-            }
-
-            window.closeModal = closeModal;
-            window.closeSummaryModal = closeSummaryModal;
-            window.confirmBooking = confirmBooking;
-        });
-    </script>
+    <script src="{% static 'cookie/cookie-consent.js' %}"></script>
+    <script src="{% static 'prenotazioni/script.js' %}"></script>
 </body>
 </html>

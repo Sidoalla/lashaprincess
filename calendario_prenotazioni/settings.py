@@ -1,14 +1,21 @@
 from pathlib import Path
 import dj_database_url
 import os
+from dotenv import load_dotenv
 
+# Carica le variabili d'ambiente dal file .env
+load_dotenv()
+
+LOGIN_URL = '/prenotazioni/login/'
+
+# Directory di base del progetto
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-549+zvem^v&=3o4k%6r#yrvo!y248f=y9t(y#n9w(j^fkt7keh'
+# Chiave segreta del progetto Django
+SECRET_KEY = os.getenv('SECRET_KEY')
 
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
+# Debug mode
+DEBUG = os.getenv('DEBUG') == 'True'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -51,8 +58,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'calendario_prenotazioni.wsgi.application'
 
+# Database
 DATABASES = {
-    'default': dj_database_url.config(default='sqlite:///db.sqlite3')
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / "db.sqlite3",
+    }
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -72,13 +83,35 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'Europe/Rome'
 USE_I18N = True
-
+USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+# STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
+
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+
+
+

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Infinite Wonderland</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'prenotazioni/css/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'cookie/cookie-consent.css' %}">
+    <script src="{% static 'cookie/cookie-consent.js' %}"></script>
+    <style>
+        @font-face {
+            font-family: 'Waltograph';
+            src: url("{% static 'prenotazioni/fonts/waltographUI.ttf' %}") format('truetype');
+        }
+
+        body {
+            background-color: #f8f8f8; /* Sfondo bianco */
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            padding: 50px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 200px; /* Dimensione attuale del logo */
+            height: auto;
+            margin-bottom: 20px;
+            animation: shrink-logo 2s ease-out forwards;
+        }
+
+        p.waltograph-font, h2.waltograph-font {
+            font-size: 20px;
+            margin-bottom: 40px;
+            font-family: 'Waltograph', Arial, sans-serif; /* Assicurati di applicare il font */
+            opacity: 0;
+            animation: fade-in 2s ease-out 2s forwards; /* Inizia dopo l'animazione del logo */
+        }
+
+        .artist-selection {
+            display: flex;
+            justify-content: center; /* Centra gli elementi */
+            flex-wrap: wrap;
+        }
+
+        .artist {
+            margin: 20px;
+            cursor: pointer;
+            transition: transform 0.3s;
+            text-align: center;
+            animation: slide-up 1s ease-out; /* Durata dell'animazione estesa a 2 secondi */
+        }
+
+        .artist img {
+            width: 200px;
+            height: 300px;
+            border-radius: 50%; /* Makes the image oval */
+            object-fit: cover; /* Ensures the image covers the container without distortion */
+        }
+
+        .artist p {
+            margin-top: 10px;
+            font-size: 18px;
+        }
+
+        .artist:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes slide-up {
+            from {
+                transform: translateY(10%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes shrink-logo {
+            0% {
+                width: 800px; /* Dimensione ingrandita del logo */
+                margin-bottom: 0;
+            }
+            100% {
+                width: 200px; /* Dimensione finale del logo */
+                margin-bottom: 20px;
+            }
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="{% static 'prenotazioni/images/logo1.png' %}" alt="Logo" class="logo">
+        <p class="waltograph-font">This is my voyage where the timeless classic <br> Sidola's Adventures in Wonderland is endlessly reimagined by artists, ME and you.</p>
+        <h2 class="waltograph-font">SELECT AN STYLE TO ENTER</h2>
+        <div class="artist-selection">
+            <div class="artist" onclick="redirectToCalendar('Laminazione')">
+                <img src="{% static 'prenotazioni/images/laminazione.png' %}" alt="Laminazione">
+                <p>Laminazione</p>
+            </div>
+            <div class="artist" onclick="redirectToCalendar('Effetto Naturale')">
+                <img src="{% static 'prenotazioni/images/effettonaturale.png' %}" alt="Effetto Naturale">
+                <p>Effetto Naturale</p>
+            </div>
+            <div class="artist" onclick="redirectToCalendar('One to One')">
+                <img src="{% static 'prenotazioni/images/onetoone.png' %}" alt="One to One">
+                <p>One to One</p>
+            </div>
+            <div class="artist" onclick="redirectToCalendar('Fox')">
+                <img src="{% static 'prenotazioni/images/fox.png' %}" alt="Fox">
+                <p>Fox</p>
+            </div>
+            <div class="artist" onclick="redirectToCalendar('Volume')">
+                <img src="{% static 'prenotazioni/images/volume.png' %}" alt="Volume">
+                <p>Volume</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cookie Consent Banner -->
+    <div id="cookie-consent-overlay" class="cookie-overlay"></div>
+    <div id="cookie-consent-banner" class="cookie-banner">
+        <div class="cookie-content">
+            <p class="cookie-text">Ti piacciono i biscotti? 🍪 Io li adorooooo e li uso per assicurarti la migliore esperienza sul mio sito. <a href="{% url 'informativa_privacy' %}" class="cookie-info-link">Maggiori informazioni</a></p>
+            <div class="cookie-buttons">
+                <button id="accept-cookies" class="btn-cookie btn-primary">Accetta i cookie</button>
+                <button id="decline-cookies" class="btn-cookie btn-secondary">Rifiuta</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function redirectToCalendar(artist) {
+            window.location.href = "{% url 'home' %}?artist=" + encodeURIComponent(artist);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const acceptCookiesButton = document.getElementById('accept-cookies');
+            const declineCookiesButton = document.getElementById('decline-cookies');
+            const cookieBanner = document.getElementById('cookie-consent-banner');
+            const cookieOverlay = document.getElementById('cookie-consent-overlay');
+
+            acceptCookiesButton.addEventListener('click', function() {
+                setCookie('userConsent', 'yes', 365);
+                hideCookieBanner();
+            });
+
+            declineCookiesButton.addEventListener('click', function() {
+                hideCookieBanner();
+            });
+
+            function setCookie(name, value, days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                const expires = "expires=" + date.toUTCString();
+                document.cookie = name + "=" + value + ";" + expires + ";path=/";
+            }
+
+            function getCookie(name) {
+                const nameEQ = name + "=";
+                const ca = document.cookie.split(';');
+                for(let i = 0; i < ca.length; i++) {
+                    let c = ca[i];
+                    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+                }
+                return null;
+            }
+
+            function checkCookieConsent() {
+                return getCookie('userConsent') === 'yes';
+            }
+
+            function hideCookieBanner() {
+                cookieBanner.style.display = 'none';
+                cookieOverlay.style.display = 'none';
+            }
+
+            if (!checkCookieConsent()) {
+                cookieBanner.style.display = 'block';
+                cookieOverlay.style.display = 'block';
+            } else {
+                hideCookieBanner();
+            }
+        });
+    </script>
+</body>
+</html>

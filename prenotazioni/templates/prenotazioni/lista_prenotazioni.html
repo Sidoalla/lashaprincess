@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Lista Prenotazioni</h2>
+  <ul>
+    {% for prenotazione in prenotazioni %}
+      <li>{{ prenotazione.nome }} - {{ prenotazione.data_prenotazione }} {{ prenotazione.ora_prenotazione }}
+        <a href="{% url 'modifica_prenotazione' prenotazione.id %}">Modifica</a>
+        <a href="{% url 'cancella_prenotazione' prenotazione.id %}">Cancella</a>
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
