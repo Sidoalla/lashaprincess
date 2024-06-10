@@ -14,9 +14,9 @@ import os
 
 load_dotenv()
 
-# Path to the `credentials.json` file
-GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE')
-GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE')
+# Leggi le credenziali dal contenuto JSON delle variabili d'ambiente
+GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO = json.loads(os.getenv('GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE'))
+GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO = json.loads(os.getenv('GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE'))
 SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/spreadsheets']
 CALENDAR_ID = os.getenv('GOOGLE_CALENDAR_ID')
 SHEET_ID = os.getenv('GOOGLE_SHEET_ID')
@@ -116,8 +116,8 @@ def informativa_privacy(request):
     return render(request, 'prenotazioni/informativa_privacy.html')
 
 def add_event_to_google_calendar(prenotazione):
-    credentials = service_account.Credentials.from_service_account_file(
-        GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE, scopes=['https://www.googleapis.com/auth/calendar'])
+    credentials = service_account.Credentials.from_service_account_info(
+        GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO, scopes=['https://www.googleapis.com/auth/calendar'])
     service = build('calendar', 'v3', credentials=credentials)
 
     start_time = datetime.strptime(prenotazione.ora_prenotazione, "%H:%M").strftime("%H:%M:%S")
@@ -158,8 +158,8 @@ def format_time(time_str):
             return time_str
 
 def format_column_times():
-    credentials = service_account.Credentials.from_service_account_file(
-        GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE, scopes=['https://www.googleapis.com/auth/spreadsheets'])
+    credentials = service_account.Credentials.from_service_account_info(
+        GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO, scopes=['https://www.googleapis.com/auth/spreadsheets'])
     service = build('sheets', 'v4', credentials=credentials)
     sheet = service.spreadsheets()
 
@@ -193,8 +193,8 @@ def format_column_times():
 format_column_times()
 
 def add_booking_to_google_sheets(prenotazione):
-    credentials = service_account.Credentials.from_service_account_file(
-        GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE, scopes=['https://www.googleapis.com/auth/spreadsheets'])
+    credentials = service_account.Credentials.from_service_account_info(
+        GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO, scopes=['https://www.googleapis.com/auth/spreadsheets'])
     service = build('sheets', 'v4', credentials=credentials)
     sheet = service.spreadsheets()
 
@@ -223,6 +223,29 @@ def add_booking_to_google_sheets(prenotazione):
     except Exception as e:
         logger.error(f"Errore durante l'aggiunta della prenotazione a Google Sheets: {e}")
         raise
+
+@csrf_exempt
+def webhook_notification(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            event_id = data['id']
+
+            if 'resourceState' in data and data['resourceState'] == 'deleted':
+                # L'evento è stato eliminato, cancella la prenotazione corrispondente
+                try:
+                    prenotazione = Prenotazione.objects.get(google_calendar_event_id=event_id)
+                    prenotazione.cancellato = True
+                    prenotazione.save()
+                    logger.info(f'Prenotazione cancellata per l\'evento Google Calendar ID: {event_id}')
+                except Prenotazione.DoesNotExist:
+                    logger.error(f'Prenotazione non trovata per l\'evento Google Calendar ID: {event_id}')
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            logger.error(f"Errore durante la gestione della notifica webhook: {e}")
+            return JsonResponse({'status': 'error', 'message': 'Errore durante la gestione della notifica webhook.'}, status=500)
+
+    return JsonResponse({'error': 'Invalid request'}, status=400)
 
 @csrf_exempt
 @login_required
@@ -256,8 +279,8 @@ def cancella_prenotazione(request, prenotazione_id):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 def delete_event_from_google_calendar(prenotazione):
-    credentials = service_account.Credentials.from_service_account_file(
-        GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE, scopes=['https://www.googleapis.com/auth/calendar'])
+    credentials = service_account.Credentials.from_service_account_info(
+        GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO, scopes=['https://www.googleapis.com/auth/calendar'])
     service = build('calendar', 'v3', credentials=credentials)
 
     try:
@@ -272,8 +295,8 @@ def delete_event_from_google_calendar(prenotazione):
         raise
 
 def add_cancellation_reason_to_google_sheets(prenotazione, motivo):
-    credentials = service_account.Credentials.from_service_account_file(
-        GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE, scopes=['https://www.googleapis.com/auth/spreadsheets'])
+    credentials = service_account.Credentials.from_service_account_info(
+        GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO, scopes=['https://www.googleapis.com/auth/spreadsheets'])
     service = build('sheets', 'v4', credentials=credentials)
     sheet = service.spreadsheets()
 

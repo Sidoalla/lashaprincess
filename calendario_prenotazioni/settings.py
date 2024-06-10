@@ -17,6 +17,9 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # Debug mode
 DEBUG = os.getenv('DEBUG') == 'True'
 
+# Aggiungi il dominio Heroku a ALLOWED_HOSTS
+ALLOWED_HOSTS = ['calendario-prenotazioni-a187175c5b29.herokuapp.com', 'localhost', '127.0.0.1']
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -111,7 +114,3 @@ LOGGING = {
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
-
-
-
-
