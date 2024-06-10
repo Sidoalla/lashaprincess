@@ -1,1 +1,21 @@
 .DS_Store
+# Ignore .env file containing environment variables
+.env
+
+# Ignore Python bytecode files
+*.pyc
+__pycache__/
+
+# Ignore SQLite database file
+db.sqlite3
+
+# Ignore static files
+staticfiles/
+
+# Ignore system files
+.DS_Store
+
+# Ignore virtual environment directories
+venv/
+myvenv/
+
