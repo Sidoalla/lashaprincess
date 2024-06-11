@@ -1,27 +1,49 @@
 from pathlib import Path
 import dj_database_url
 import os
-from dotenv import load_dotenv
-
-SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key')
-
-
-# Carica le variabili d'ambiente dal file .env
-load_dotenv()
-
-LOGIN_URL = '/prenotazioni/login/'
+import environ
+import json
 
 # Directory di base del progetto
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Chiave segreta del progetto Django
-SECRET_KEY = os.getenv('SECRET_KEY')
+# Inizializza `environ`
+env = environ.Env(
+    # Imposta valori di default e forzature
+    DEBUG=(bool, False)
+)
 
-# Debug mode
-DEBUG = os.getenv('DEBUG') == 'True'
+# Leggi il file .env
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-# Aggiungi il dominio Heroku a ALLOWED_HOSTS
-ALLOWED_HOSTS = ['calendario-prenotazioni-a187175c5b29.herokuapp.com', 'localhost', '127.0.0.1']
+# Carica le variabili d'ambiente dal file .env
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env('DEBUG')
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+
+# Carica il contenuto del file JSON per Google Calendar
+google_calendar_service_account_file_path = os.getenv('GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE')
+if google_calendar_service_account_file_path:
+    try:
+        with open(google_calendar_service_account_file_path) as f:
+            GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO = json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError) as e:
+        raise ValueError(f"Errore nel leggere il file di configurazione Google Calendar: {e}")
+else:
+    raise ValueError("La variabile d'ambiente GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE non è configurata.")
+
+# Carica il contenuto del file JSON per Google Sheets
+google_sheets_service_account_file_path = os.getenv('GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE')
+if google_sheets_service_account_file_path:
+    try:
+        with open(google_sheets_service_account_file_path) as f:
+            GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO = json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError) as e:
+        raise ValueError(f"Errore nel leggere il file di configurazione Google Sheets: {e}")
+else:
+    raise ValueError("La variabile d'ambiente GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE non è configurata.")
+
+LOGIN_URL = '/prenotazioni/login/'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -66,10 +88,9 @@ WSGI_APPLICATION = 'calendario_prenotazioni.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / "db.sqlite3",
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{os.path.join(BASE_DIR, "db.sqlite3")}'
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -95,11 +116,9 @@ USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-# STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 
 LOGGING = {
     'version': 1,

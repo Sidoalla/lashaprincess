@@ -14,16 +14,36 @@ import os
 
 load_dotenv()
 
-# Leggi le credenziali dal contenuto JSON delle variabili d'ambiente
-GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO = json.loads(os.getenv('GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE'))
-GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO = json.loads(os.getenv('GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE'))
-SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/spreadsheets']
-CALENDAR_ID = os.getenv('GOOGLE_CALENDAR_ID')
-SHEET_ID = os.getenv('GOOGLE_SHEET_ID')
-
 # Configura il logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
+
+# Verifica che le variabili d'ambiente siano correttamente caricate
+google_calendar_service_account_file_path = os.getenv('GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE')
+google_sheets_service_account_file_path = os.getenv('GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE')
+logger.debug(f'GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE: {google_calendar_service_account_file_path}')
+logger.debug(f'GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE: {google_sheets_service_account_file_path}')
+
+# Carica i contenuti dei file JSON
+try:
+    with open(google_calendar_service_account_file_path) as f:
+        GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO = json.load(f)
+    logger.debug("File JSON Google Calendar caricato correttamente")
+except (json.JSONDecodeError, FileNotFoundError) as e:
+    logger.error(f"Errore nel leggere il file JSON Google Calendar: {e}")
+    raise
+
+try:
+    with open(google_sheets_service_account_file_path) as f:
+        GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO = json.load(f)
+    logger.debug("File JSON Google Sheets caricato correttamente")
+except (json.JSONDecodeError, FileNotFoundError) as e:
+    logger.error(f"Errore nel leggere il file JSON Google Sheets: {e}")
+    raise
+
+SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/spreadsheets']
+CALENDAR_ID = os.getenv('GOOGLE_CALENDAR_ID')
+SHEET_ID = os.getenv('GOOGLE_SHEET_ID')
 
 # Funzione per selezionare l'artista
 def select_artist(request):
