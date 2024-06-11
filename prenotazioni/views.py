@@ -18,27 +18,19 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-# Verifica che le variabili d'ambiente siano correttamente caricate
-google_calendar_service_account_file_path = os.getenv('GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE')
-google_sheets_service_account_file_path = os.getenv('GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE')
-logger.debug(f'GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE: {google_calendar_service_account_file_path}')
-logger.debug(f'GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE: {google_sheets_service_account_file_path}')
-
-# Carica i contenuti dei file JSON
+# Carica i contenuti JSON dalle variabili d'ambiente
 try:
-    with open(google_calendar_service_account_file_path) as f:
-        GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO = json.load(f)
-    logger.debug("File JSON Google Calendar caricato correttamente")
-except (json.JSONDecodeError, FileNotFoundError) as e:
-    logger.error(f"Errore nel leggere il file JSON Google Calendar: {e}")
+    GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO = json.loads(os.getenv('GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO'))
+    logger.debug("Credenziali Google Calendar caricate correttamente")
+except (json.JSONDecodeError, TypeError) as e:
+    logger.error(f"Errore nel leggere le credenziali Google Calendar: {e}")
     raise
 
 try:
-    with open(google_sheets_service_account_file_path) as f:
-        GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO = json.load(f)
-    logger.debug("File JSON Google Sheets caricato correttamente")
-except (json.JSONDecodeError, FileNotFoundError) as e:
-    logger.error(f"Errore nel leggere il file JSON Google Sheets: {e}")
+    GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO = json.loads(os.getenv('GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO'))
+    logger.debug("Credenziali Google Sheets caricate correttamente")
+except (json.JSONDecodeError, TypeError) as e:
+    logger.error(f"Errore nel leggere le credenziali Google Sheets: {e}")
     raise
 
 SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/spreadsheets']
