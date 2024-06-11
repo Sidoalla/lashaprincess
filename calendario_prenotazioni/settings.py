@@ -9,7 +9,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Inizializza `environ`
 env = environ.Env(
-    # Imposta valori di default e forzature
     DEBUG=(bool, False)
 )
 
@@ -21,27 +20,25 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
-# Carica il contenuto del file JSON per Google Calendar
-google_calendar_service_account_file_path = os.getenv('GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE')
-if google_calendar_service_account_file_path:
+# Carica il contenuto JSON per Google Calendar direttamente dalla variabile d'ambiente
+google_calendar_service_account_json = os.getenv('GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON')
+if google_calendar_service_account_json:
     try:
-        with open(google_calendar_service_account_file_path) as f:
-            GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO = json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError) as e:
+        GOOGLE_CALENDAR_SERVICE_ACCOUNT_INFO = json.loads(google_calendar_service_account_json)
+    except json.JSONDecodeError as e:
         raise ValueError(f"Errore nel leggere il file di configurazione Google Calendar: {e}")
 else:
-    raise ValueError("La variabile d'ambiente GOOGLE_CALENDAR_SERVICE_ACCOUNT_FILE non è configurata.")
+    raise ValueError("La variabile d'ambiente GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON non è configurata.")
 
-# Carica il contenuto del file JSON per Google Sheets
-google_sheets_service_account_file_path = os.getenv('GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE')
-if google_sheets_service_account_file_path:
+# Carica il contenuto JSON per Google Sheets direttamente dalla variabile d'ambiente
+google_sheets_service_account_json = os.getenv('GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON')
+if google_sheets_service_account_json:
     try:
-        with open(google_sheets_service_account_file_path) as f:
-            GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO = json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError) as e:
+        GOOGLE_SHEETS_SERVICE_ACCOUNT_INFO = json.loads(google_sheets_service_account_json)
+    except json.JSONDecodeError as e:
         raise ValueError(f"Errore nel leggere il file di configurazione Google Sheets: {e}")
 else:
-    raise ValueError("La variabile d'ambiente GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE non è configurata.")
+    raise ValueError("La variabile d'ambiente GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON non è configurata.")
 
 LOGIN_URL = '/prenotazioni/login/'
 

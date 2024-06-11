@@ -1,21 +1,65 @@
-.DS_Store
-# Ignore .env file containing environment variables
-.env
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
-# Ignore Python bytecode files
-*.pyc
+# C Extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+*.egg-info/
+.installed.cfg
+lib/
+lib64/
 __pycache__/
 
-# Ignore SQLite database file
-db.sqlite3
-
-# Ignore static files
+# Django stuff:
+*.log
 staticfiles/
+media/
 
-# Ignore system files
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# dotenv
+.env
+
+# Pyre type checker
+.pyre/
+
+# Mypy
+.mypy_cache/
+
+# macOS specific files
 .DS_Store
 
-# Ignore virtual environment directories
-venv/
-myvenv/
-
+# Environments
+.env
